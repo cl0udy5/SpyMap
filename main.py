@@ -312,11 +312,19 @@ async def handle_start_scraping_callback(update: Update, context: ContextTypes.D
 
 async def handle_stripe_pay_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle the Pay button: create a Stripe Checkout session and send the link."""
+
     query = update.callback_query
     await query.answer()
     chat_id = query.message.chat_id
     price = calculate_price(context)
     price_in_cents = int(price * 100)
+
+    # --- DEBUG: Log the type and value of stripe_module.checkout and Session ---
+    logger.info(f"stripe_module: {stripe_module}")
+    logger.info(f"stripe_module.__file__: {getattr(stripe_module, '__file__', 'N/A')}")
+    logger.info(f"stripe_module.checkout: {getattr(stripe_module, 'checkout', None)} (type: {type(getattr(stripe_module, 'checkout', None))})")
+    if hasattr(stripe_module, 'checkout'):
+        logger.info(f"stripe_module.checkout.Session: {getattr(stripe_module.checkout, 'Session', None)} (type: {type(getattr(stripe_module.checkout, 'Session', None))})")
 
     if not STRIPE_API_KEY:
         await query.edit_message_text("❌ Payment processing is not configured.")
