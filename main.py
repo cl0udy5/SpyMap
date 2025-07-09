@@ -3,7 +3,7 @@ import logging
 import time
 import threading
 import asyncio
-import stripe
+import stripe as stripe_module
 import paypalrestsdk as paypal
 from dotenv import load_dotenv
 from flask import Flask, request, Response
@@ -52,6 +52,7 @@ else:
     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET_TEST")
 
 # Configure Stripe
+stripe = stripe_module
 stripe.api_key = STRIPE_API_KEY
 
 # --- PayPal Configuration ---
