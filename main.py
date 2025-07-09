@@ -52,8 +52,7 @@ else:
     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET_TEST")
 
 # Configure Stripe
-stripe = stripe_module
-stripe.api_key = STRIPE_API_KEY
+stripe_module.api_key = STRIPE_API_KEY
 
 # --- PayPal Configuration ---
 PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox")
@@ -327,7 +326,7 @@ async def handle_stripe_pay_callback(update: Update, context: ContextTypes.DEFAU
     try:
         # Define the blocking function for Stripe
         def create_stripe_session():
-            return stripe.checkout.Session.create(
+            return stripe_module.checkout.Session.create(
                 line_items=[{
                     'price_data': {
                         'currency': 'usd',
@@ -539,11 +538,11 @@ def stripe_webhook():
     event = None
 
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+        event = stripe_module.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except ValueError as e: # Invalid payload
         logger.error(f"Stripe webhook ValueError: {e}")
         return Response(status=400)
-    except stripe.error.SignatureVerificationError as e: # Invalid signature
+    except stripe_module.error.SignatureVerificationError as e: # Invalid signature
         logger.error(f"Stripe signature verification error: {e}")
         return Response(status=400)
 
