@@ -157,13 +157,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         context.user_data["step"] = STEP_RADIUS
 
     elif user_step == STEP_RADIUS:
+        MAX_RADIUS = 50000
+        MIN_RADIUS = 100
         if not user_text.isdigit():
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text="❌ Please send a number for the radius (e.g. 100-50000)."
             )
             return
-        context.user_data["radius"] = int(user_text)
+        radius = int(user_text)
+        if radius < MIN_RADIUS or radius > MAX_RADIUS:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"❌ Please enter a radius between {MIN_RADIUS} and {MAX_RADIUS} meters."
+            )
+            return
+        context.user_data["radius"] = radius
         await context.bot.edit_message_text(
             chat_id=update.effective_chat.id, message_id=bot_msg_id,
             text=f"📏 Radius set to: *{user_text}* meters", parse_mode="Markdown",
