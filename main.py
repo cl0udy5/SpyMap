@@ -37,6 +37,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL") # e.g., https://your-domain.com
 PORT = int(os.getenv("PORT", "8443"))
+PAYMENTS_ENABLED = os.getenv("PAYMENTS_ENABLED", "true").lower() == "true"
 
 SEND_BOTH_FORMATS = False
 
@@ -85,6 +86,9 @@ if STRIPE_MODE == "live":
     logger.info("--- STRIPE IS IN LIVE MODE --- REAL PAYMENTS WILL BE PROCESSED ---")
 else:
     logger.info("--- Stripe is in TEST MODE. No real payments will be processed. ---")
+
+if not PAYMENTS_ENABLED:
+    logger.warning("Payments are DISABLED via PAYMENTS_ENABLED flag. Jobs will run without charging users.")
 
 
 # --- Global App State ---
@@ -293,11 +297,20 @@ async def handle_start_scraping_callback(update: Update, context: ContextTypes.D
     """Handle the Start Scraping button: calculate price and show payment options."""
     query = update.callback_query
     await query.answer()
+    chat_id = query.message.chat_id
     price = calculate_price(context)
 
     # Check which payment providers are configured
     stripe_configured = all([STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET])
     paypal_configured = all([PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID])
+
+    if not PAYMENTS_ENABLED:
+        await query.edit_message_text(
+            "⚠️ Payments are temporarily disabled. Your scraping job will start automatically.",
+            parse_mode="Markdown"
+        )
+        await execute_scraping(context.bot, chat_id, context.user_data.copy())
+        return
 
     payment_buttons = []
     if stripe_configured:
@@ -327,6 +340,11 @@ async def handle_stripe_pay_callback(update: Update, context: ContextTypes.DEFAU
     chat_id = query.message.chat_id
     price = calculate_price(context)
     price_in_cents = int(price * 100)
+
+    if not PAYMENTS_ENABLED:
+        await query.edit_message_text("⚠️ Payments are currently disabled. Your job will start automatically.")
+        await execute_scraping(context.bot, chat_id, context.user_data.copy())
+        return
 
     # --- DEBUG: Log the type and value of stripe_module.checkout and Session ---
     logger.info(f"stripe_module: {stripe_module}")
@@ -380,6 +398,11 @@ async def handle_paypal_pay_callback(update: Update, context: ContextTypes.DEFAU
     await query.answer()
     chat_id = query.message.chat_id
     price = calculate_price(context)
+
+    if not PAYMENTS_ENABLED:
+        await query.edit_message_text("⚠️ Payments are currently disabled. Your job will start automatically.")
+        await execute_scraping(context.bot, chat_id, context.user_data.copy())
+        return
 
     if not all([PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET]):
         await query.edit_message_text("❌ PayPal processing is not configured.")
